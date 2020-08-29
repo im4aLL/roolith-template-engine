@@ -9,10 +9,12 @@ class View implements ViewInterface
     protected $cacheFolder;
     protected $viewFolder;
     protected $fileExtension;
+    protected $templateData;
 
     public function __construct()
     {
-        $this->fileExtension = 'html';
+        $this->fileExtension = 'php';
+        $this->templateData = [];
     }
 
     /**
@@ -50,19 +52,21 @@ class View implements ViewInterface
      */
     public function compile($filename, $data = [])
     {
+        $this->setTemplateData($data);
+
         if ($this->viewExists($filename)) {
-            $lineArray = $this->readTemplateFile($filename);
-            $parsedTemplateLineArray = $this->applyDefaultValue($lineArray);
+            ob_start();
+            extract($this->getTemplateData());
+            include($this->getFilePathByName($filename));
+            $output = ob_get_contents();
+            ob_end_clean();
 
-            dd($parsedTemplateLineArray);
-
-//            $tempTemplateFile = $this->saveFile($parsedTemplateLineArray);
-//            $templateString = $this->parseTempTemplate($tempTemplateFile, $data);
-
-//            return $templateString;
+            return $output;
         } else {
             throw new Exception("$filename not exists!");
         }
+
+        $this->resetTemplateData();
     }
 
     /**
@@ -76,43 +80,74 @@ class View implements ViewInterface
         return file_exists($this->getFilePathByName($filename));
     }
 
+    /**
+     * Get file path
+     *
+     * @param $filename
+     * @return string
+     */
     private function getFilePathByName($filename)
     {
         return $this->viewFolder . '/' . $filename . '.' . $this->fileExtension;
     }
 
-    private function readTemplateFile($filename)
+    /**
+     * @return array
+     */
+    public function getTemplateData()
     {
-        $filepath = $this->getFilePathByName($filename);
-        $fp = fopen($filepath, 'r');
-
-        $content = fread($fp, filesize($filepath));
-        $lines = explode("\n", $content);
-        fclose($fp);
-
-        return $lines;
+        return $this->templateData;
     }
 
-    private function applyDefaultValue($lineArray)
+    /**
+     * @param array $templateData
+     * @return View
+     */
+    public function setTemplateData($templateData)
     {
-        $result = [];
+        $this->templateData = $templateData;
 
-        foreach ($lineArray as $line) {
-            $patternArray = [
-                '/{{ /',
-                '/ }}/',
-            ];
+        return $this;
+    }
 
-            $replacementArray = [
-                '<?php ',
-                '; ?>',
-            ];
+    /**
+     * @return $this
+     */
+    public function resetTemplateData()
+    {
+        $this->templateData = [];
 
-            $result[] = preg_replace($patternArray, $replacementArray, $line);
+        return $this;
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function inject($filename)
+    {
+        if ($this->viewExists($filename)) {
+            extract($this->getTemplateData());
+            include($this->getFilePathByName($filename));
+        } else {
+            throw new Exception("$filename not exists!");
         }
 
-        return $result;
+        return $this;
     }
 
+    /**
+     * @inheritDoc
+     */
+    public function url($urlSuffix)
+    {
+        return '/' . $urlSuffix;
+    }
 
+    /**
+     * @inheritDoc
+     */
+    public function escape($var)
+    {
+        return htmlspecialchars($var, ENT_QUOTES);
+    }
 }

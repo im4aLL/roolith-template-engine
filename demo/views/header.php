@@ -5,7 +5,7 @@
     <meta name="viewport"
           content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
-    <title>{{ $title }}</title>
-    <link rel="stylesheet" href="{{ url('assets/app.css') }}">
+    <title><?= $this->escape($title) ?></title>
+    <link rel="stylesheet" href="<?= $this->url('assets/app.css') ?>">
 </head>
 <body>

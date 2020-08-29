@@ -30,4 +30,23 @@ interface ViewInterface
      * @throws Exception
      */
     public function compile($filename, $data = []);
+
+    /**
+     * @param $filename
+     * @return $this
+     * @throws Exception
+     */
+    public function inject($filename);
+
+    /**
+     * @param $urlSuffix
+     * @return string
+     */
+    public function url($urlSuffix);
+
+    /**
+     * @param $var
+     * @return string
+     */
+    public function escape($var);
 }
