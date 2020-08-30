@@ -1,5 +1,5 @@
-<?php $this->inject('header') ?>
+<?php $this->inject('partials/header') ?>
 
-    <p><?= $this->escape($content) ?></p>
+    <p><?= $this->escape('content') ?></p>
 
-<?php $this->inject('footer') ?>
+<?php $this->inject('partials/footer') ?>

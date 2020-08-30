@@ -7,8 +7,7 @@ function dd($d) {
     echo '</pre>';
 }
 
-$view = new \Roolith\View();
-$view->setCacheFolder(__DIR__ . '/cache')->setViewFolder(__DIR__ . '/views');
+$view = new \Roolith\View(__DIR__ . '/views');
 try {
     $data = [
         'content' => 'home content',

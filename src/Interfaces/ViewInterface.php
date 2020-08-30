@@ -9,19 +9,7 @@ interface ViewInterface
      * @param $folderName string
      * @return $this
      */
-    public function setCacheFolder($folderName);
-
-    /**
-     * @param $folderName string
-     * @return $this
-     */
     public function setViewFolder($folderName);
-
-    /**
-     * @param $extension string
-     * @return $this
-     */
-    public function setViewFileExtension($extension);
 
     /**
      * @param $filename string
@@ -47,6 +35,7 @@ interface ViewInterface
     /**
      * @param $var
      * @return string
+     * @throws Exception
      */
     public function escape($var);
 }

@@ -6,25 +6,18 @@ use Roolith\Interfaces\ViewInterface;
 
 class View implements ViewInterface
 {
-    protected $cacheFolder;
     protected $viewFolder;
     protected $fileExtension;
     protected $templateData;
 
-    public function __construct()
+    public function __construct($viewFolder = null)
     {
         $this->fileExtension = 'php';
         $this->templateData = [];
-    }
 
-    /**
-     * @inheritDoc
-     */
-    public function setCacheFolder($folderName)
-    {
-        $this->cacheFolder = $folderName;
-
-        return $this;
+        if ($viewFolder) {
+            $this->setViewFolder($viewFolder);
+        }
     }
 
     /**
@@ -40,33 +33,22 @@ class View implements ViewInterface
     /**
      * @inheritDoc
      */
-    public function setViewFileExtension($extension)
-    {
-        $this->fileExtension = $extension;
-
-        return $this;
-    }
-
-    /**
-     * @inheritDoc
-     */
     public function compile($filename, $data = [])
     {
-        $this->setTemplateData($data);
-
         if ($this->viewExists($filename)) {
+            $this->setTemplateData($data);
+
             ob_start();
-            extract($this->getTemplateData());
+            extract($this->getTemplateData(), EXTR_SKIP);
             include($this->getFilePathByName($filename));
             $output = ob_get_contents();
             ob_end_clean();
 
+            $this->resetTemplateData();
             return $output;
         } else {
             throw new Exception("$filename not exists!");
         }
-
-        $this->resetTemplateData();
     }
 
     /**
@@ -126,7 +108,7 @@ class View implements ViewInterface
     public function inject($filename)
     {
         if ($this->viewExists($filename)) {
-            extract($this->getTemplateData());
+            extract($this->getTemplateData(), EXTR_SKIP);
             include($this->getFilePathByName($filename));
         } else {
             throw new Exception("$filename not exists!");
@@ -148,6 +130,12 @@ class View implements ViewInterface
      */
     public function escape($var)
     {
-        return htmlspecialchars($var, ENT_QUOTES);
+        extract($this->getTemplateData(), EXTR_SKIP);
+
+        if (!isset(${$var})) {
+            throw new Exception('$' .$var . ' not defined!');
+        }
+
+        return htmlspecialchars(${$var}, ENT_QUOTES);
     }
 }
