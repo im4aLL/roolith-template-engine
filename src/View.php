@@ -103,10 +103,27 @@ class View implements ViewInterface
     }
 
     /**
+     * @param $data
+     * @return $this
+     */
+    public function addTemplateData($data)
+    {
+        $array = array_merge($this->getTemplateData(), $data);
+
+        $this->setTemplateData($array);
+
+        return $this;
+    }
+
+    /**
      * @inheritDoc
      */
-    public function inject($filename)
+    public function inject($filename, $data = [])
     {
+        if (count($data) > 0) {
+            $this->addTemplateData($data);
+        }
+
         if ($this->viewExists($filename)) {
             extract($this->getTemplateData(), EXTR_SKIP);
             include($this->getFilePathByName($filename));
@@ -122,7 +139,7 @@ class View implements ViewInterface
      */
     public function url($urlSuffix)
     {
-        return '/' . $urlSuffix;
+        return '/' . ltrim($urlSuffix, '/');
     }
 
     /**

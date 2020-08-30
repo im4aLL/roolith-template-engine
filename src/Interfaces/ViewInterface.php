@@ -21,10 +21,11 @@ interface ViewInterface
 
     /**
      * @param $filename
+     * @param array $data
      * @return $this
      * @throws Exception
      */
-    public function inject($filename);
+    public function inject($filename, $data = []);
 
     /**
      * @param $urlSuffix
