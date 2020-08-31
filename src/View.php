@@ -1,8 +1,8 @@
 <?php
-namespace Roolith;
+namespace Roolith\Template\Engine;
 
-use Roolith\Exceptions\Exception;
-use Roolith\Interfaces\ViewInterface;
+use Roolith\Template\Engine\Exceptions\Exception;
+use Roolith\Template\Engine\Interfaces\ViewInterface;
 
 class View implements ViewInterface
 {

@@ -7,7 +7,7 @@ function dd($d) {
     echo '</pre>';
 }
 
-$view = new \Roolith\View(__DIR__ . '/views');
+$view = new \Roolith\Template\Engine\View(__DIR__ . '/views');
 try {
     $data = [
         'content' => 'home content',
@@ -15,6 +15,6 @@ try {
     ];
 
     echo $view->compile('home', $data);
-} catch (\Roolith\Exceptions\Exception $e) {
+} catch (\Roolith\Template\Engine\Exceptions\Exception $e) {
     echo $e->getMessage();
 }

@@ -8,7 +8,7 @@ composer install roolith/template-engine
 
 #### Usage
 ```php
-$view = new \Roolith\View(__DIR__ . '/views');
+$view = new \Roolith\Template\Engine\View(__DIR__ . '/views');
 
 try {
     $data = [
@@ -17,7 +17,7 @@ try {
     ];
 
     echo $view->compile('home', $data);
-} catch (\Roolith\Exceptions\Exception $e) {
+} catch (\Roolith\Template\Engine\Exceptions\Exception $e) {
     echo $e->getMessage();
 }
 ```

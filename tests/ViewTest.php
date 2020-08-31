@@ -1,7 +1,7 @@
 <?php
 use PHPUnit\Framework\TestCase;
-use Roolith\Interfaces\ViewInterface;
-use Roolith\View;
+use Roolith\Template\Engine\Interfaces\ViewInterface;
+use Roolith\Template\Engine\View;
 
 class ViewTest extends TestCase
 {
@@ -40,7 +40,7 @@ class ViewTest extends TestCase
 
         $this->assertEquals('aaa', $viewInstance->escape('test'));
 
-        $this->expectException(\Roolith\Exceptions\Exception::class);
+        $this->expectException(\Roolith\Template\Engine\Exceptions\Exception::class);
         $viewInstance->escape('not');
     }
 
@@ -65,7 +65,7 @@ class ViewTest extends TestCase
         $this->assertStringContainsString('home page', $result);
         $this->assertStringContainsString('home content', $result);
 
-        $this->expectException(\Roolith\Exceptions\Exception::class);
+        $this->expectException(\Roolith\Template\Engine\Exceptions\Exception::class);
         $viewInstance->compile('file-doesnt-exists');
     }
 }
