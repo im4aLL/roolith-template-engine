@@ -170,8 +170,7 @@ class View implements ViewInterface
     }
 
     /**
-     * @param mixed $baseUrl
-     * @return View
+     * @inheritDoc
      */
     public function setBaseUrl($baseUrl)
     {

@@ -41,9 +41,16 @@ interface ViewInterface
     public function escape($var);
 
     /**
+     * Set base url
+     *
+     * @return $this
+     */
+    public function setBaseUrl($baseUrl);
+
+    /**
      * Get base url
      *
-     * @return string|false
+     * @return false|string
      */
     public function getBaseUrl();
 }
