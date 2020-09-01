@@ -9,10 +9,12 @@ class View implements ViewInterface
     protected $viewFolder;
     protected $fileExtension;
     protected $templateData;
+    protected $baseUrl;
 
     public function __construct($viewFolder = null)
     {
         $this->fileExtension = 'php';
+        $this->baseUrl = false;
         $this->templateData = [];
 
         if ($viewFolder) {
@@ -139,7 +141,10 @@ class View implements ViewInterface
      */
     public function url($urlSuffix)
     {
-        return '/' . ltrim($urlSuffix, '/');
+        $baseUrl = $this->getBaseUrl();
+        $urlPrefix = $baseUrl ? $baseUrl : '/';
+
+        return $urlPrefix . ltrim($urlSuffix, '/');
     }
 
     /**
@@ -154,5 +159,24 @@ class View implements ViewInterface
         }
 
         return htmlspecialchars(${$var}, ENT_QUOTES);
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function getBaseUrl()
+    {
+        return $this->baseUrl;
+    }
+
+    /**
+     * @param mixed $baseUrl
+     * @return View
+     */
+    public function setBaseUrl($baseUrl)
+    {
+        $this->baseUrl = $baseUrl;
+
+        return $this;
     }
 }

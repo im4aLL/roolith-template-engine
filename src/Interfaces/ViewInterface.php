@@ -39,4 +39,11 @@ interface ViewInterface
      * @throws Exception
      */
     public function escape($var);
+
+    /**
+     * Get base url
+     *
+     * @return string|false
+     */
+    public function getBaseUrl();
 }

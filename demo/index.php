@@ -8,6 +8,7 @@ function dd($d) {
 }
 
 $view = new \Roolith\Template\Engine\View(__DIR__ . '/views');
+$view->setBaseUrl('http://localhost/roolith-template-engine/');
 try {
     $data = [
         'content' => 'home content',
