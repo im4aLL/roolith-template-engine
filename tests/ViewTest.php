@@ -68,4 +68,16 @@ class ViewTest extends TestCase
         $this->expectException(\Roolith\Template\Engine\Exceptions\Exception::class);
         $viewInstance->compile('file-doesnt-exists');
     }
+
+    public function testShouldCompileNestedViewFile()
+    {
+        $viewInstance = $this->getInstance();
+        $data = [
+            'content' => 'nested',
+        ];
+        $result = $viewInstance->compile('nested.nested', $data);
+
+        $this->assertNotEmpty($result);
+        $this->assertStringContainsString('nested', $result);
+    }
 }

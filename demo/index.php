@@ -15,7 +15,7 @@ try {
         'title' => 'home page',
     ];
 
-    echo $view->compile('home', $data);
+    echo $view->compile('nested.template', $data);
 } catch (\Roolith\Template\Engine\Exceptions\Exception $e) {
     echo $e->getMessage();
 }

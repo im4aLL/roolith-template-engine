@@ -22,6 +22,7 @@ try {
 }
 ```
 
+
 `views` folder contains - 
 ```
 home.php
@@ -74,4 +75,29 @@ or
 `inject` method allows to inject another view
 ```php
 $this->inject('partials/footer')
+```
+
+For nested call
+
+```php
+$view->compile('nested.template', $data);
+```
+It will look for `nested` folder and `template.php` file.
+
+Expected unit test result 
+
+```bash
+$ ./vendor/bin/phpunit --testdox tests --stderr
+PHPUnit 9.6.23 by Sebastian Bergmann and contributors.
+
+View
+ ✔ Should set view folder
+ ✔ Should escape variable
+ ✔ Should add slash before url
+ ✔ Should compile view file
+ ✔ Should compile nested view file
+
+Time: 00:00.009, Memory: 4.00 MB
+
+OK (5 tests, 11 assertions)
 ```

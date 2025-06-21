@@ -72,7 +72,15 @@ class View implements ViewInterface
      */
     private function getFilePathByName($filename)
     {
-        return $this->viewFolder . '/' . $filename . '.' . $this->fileExtension;
+        $isFilenameContainsDot = strpos($filename, '.') !== false;
+
+        if (!$isFilenameContainsDot) {
+            return $this->viewFolder . '/' . $filename . '.' . $this->fileExtension;
+        }
+
+        $updatedFilename = str_replace('.', '/', $filename);
+
+        return $this->viewFolder . '/' . $updatedFilename . '.' . $this->fileExtension;
     }
 
     /**
