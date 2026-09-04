@@ -4,18 +4,39 @@ namespace Roolith\Template\Engine;
 use Roolith\Template\Engine\Exceptions\Exception;
 use Roolith\Template\Engine\Interfaces\ViewInterface;
 
+/**
+ * View
+ *
+ * Renders PHP templates with output buffering. Path resolution is
+ * delegated to TemplatePathResolver. This class remains the
+ * backward compatible facade for rendering.
+ */
 class View implements ViewInterface
 {
     protected ?string $viewFolder = null;
     protected string $fileExtension;
     protected array $templateData;
     protected string|false $baseUrl;
+    protected TemplatePathResolver $pathResolver;
 
-    public function __construct(?string $viewFolder = null)
+    /**
+     * Create view
+     *
+     * Creates a view with an optional view folder and path resolver.
+     * An explicit view folder argument overrides the resolver folder.
+     *
+     * @param string|null $viewFolder Base directory for views.
+     * @param TemplatePathResolver|null $resolver Path resolver to use, created when null.
+     */
+    public function __construct(?string $viewFolder = null, ?TemplatePathResolver $resolver = null)
     {
         $this->fileExtension = 'php';
         $this->baseUrl = false;
         $this->templateData = [];
+        $this->pathResolver = $resolver ?? new TemplatePathResolver();
+
+        $this->fileExtension = $this->pathResolver->getFileExtension();
+        $this->viewFolder = $this->pathResolver->getViewFolder();
 
         if ($viewFolder) {
             $this->setViewFolder($viewFolder);
@@ -23,21 +44,61 @@ class View implements ViewInterface
     }
 
     /**
-     * @inheritDoc
+     * Set view folder
+     *
+     * Validates the folder through the path resolver and syncs local state.
+     *
+     * @param string $folderName Base directory for views.
+     * @return static
+     * @throws \InvalidArgumentException for invalid view folder.
      */
     public function setViewFolder(string $folderName): static
     {
-        if ($folderName === '' || !is_dir($folderName)) {
-            throw new \InvalidArgumentException("Invalid view folder [$folderName]: directory does not exist.");
-        }
-
-        $this->viewFolder = rtrim($folderName, '/\\');
+        $this->pathResolver->setViewFolder($folderName);
+        $this->viewFolder = $this->pathResolver->getViewFolder();
+        $this->fileExtension = $this->pathResolver->getFileExtension();
 
         return $this;
     }
 
     /**
-     * @inheritDoc
+     * Get path resolver
+     *
+     * Returns the active resolver used for view name resolution.
+     *
+     * @return TemplatePathResolver Active path resolver.
+     */
+    public function getPathResolver(): TemplatePathResolver
+    {
+        return $this->pathResolver;
+    }
+
+    /**
+     * Set path resolver
+     *
+     * Replaces the active resolver and syncs local view folder state.
+     *
+     * @param TemplatePathResolver $resolver Path resolver to use.
+     * @return static
+     */
+    public function setPathResolver(TemplatePathResolver $resolver): static
+    {
+        $this->pathResolver = $resolver;
+        $this->viewFolder = $resolver->getViewFolder();
+        $this->fileExtension = $resolver->getFileExtension();
+
+        return $this;
+    }
+
+    /**
+     * Compile view
+     *
+     * Renders a template file with the given data and returns its output.
+     *
+     * @param string $filename View name to render.
+     * @param array $data Template variables.
+     * @return string Rendered template output.
+     * @throws Exception for missing template.
      */
     public function compile(string $filename, array $data = []): string
     {
@@ -65,10 +126,12 @@ class View implements ViewInterface
     }
 
     /**
-     * If view exists
+     * Check if view exists
      *
-     * @param $filename
-     * @return bool
+     * Resolves the view name and checks whether the template file exists.
+     *
+     * @param string $filename View name to check.
+     * @return bool True when the resolved template file exists.
      */
     private function viewExists(string $filename): bool
     {
@@ -85,79 +148,25 @@ class View implements ViewInterface
      * same way for backward compatibility, but it is deprecated and
      * triggers `E_USER_DEPRECATED`. New code should use `/`.
      *
-     * @param string $filename
-     * @return string
+     * @param string $filename View name to resolve.
+     * @return string Resolved template file path.
      * @throws \InvalidArgumentException for invalid view names
      */
     private function getFilePathByName(string $filename): string
     {
-        if ($filename === '') {
-            throw new \InvalidArgumentException('Invalid view name: must be a non-empty string.');
-        }
+        $resolved = $this->pathResolver->resolve($filename);
+        $this->viewFolder = $this->pathResolver->getViewFolder();
+        $this->fileExtension = $this->pathResolver->getFileExtension();
 
-        if (strpos($filename, ':') !== false) {
-            throw new \InvalidArgumentException("Invalid view name [$filename]: stream wrappers are not allowed.");
-        }
-
-        if ($filename[0] === '/' || $filename[0] === '\\') {
-            throw new \InvalidArgumentException("Invalid view name [$filename]: absolute paths are not allowed.");
-        }
-
-        if (strpos($filename, '\\') !== false) {
-            throw new \InvalidArgumentException("Invalid view name [$filename]: backslash separators are not allowed.");
-        }
-
-        if (strpos($filename, '..') !== false) {
-            throw new \InvalidArgumentException("Invalid view name [$filename]: parent directory segments are not allowed.");
-        }
-
-        if (!preg_match('#^[A-Za-z0-9_-]+(?:[./][A-Za-z0-9_-]+)*$#', $filename)) {
-            throw new \InvalidArgumentException("Invalid view name [$filename]: allowed characters are letters, numbers, _, -, / and .");
-        }
-
-        // Canonical separator is `/`. A `.` is treated as an alias for `/`
-        // so `partials.header` and `partials/header` resolve to the same file.
-        $isFilenameContainsDot = strpos($filename, '.') !== false;
-
-        if ($this->viewFolder === null || $this->viewFolder === '') {
-            throw new \InvalidArgumentException('Invalid view folder: must be a non-empty string.');
-        }
-
-        if (!$isFilenameContainsDot) {
-            $candidate = $this->viewFolder . '/' . $filename . '.' . $this->fileExtension;
-        } else {
-            trigger_error(
-                "View name [$filename]: dot separator is deprecated, use '/' instead (e.g. '" . str_replace('.', '/', $filename) . "').",
-                E_USER_DEPRECATED
-            );
-            $updatedFilename = str_replace('.', '/', $filename);
-
-            $candidate = $this->viewFolder . '/' . $updatedFilename . '.' . $this->fileExtension;
-        }
-
-        $candidate = preg_replace('#/+#', '/', $candidate);
-
-        $baseReal = realpath($this->viewFolder);
-
-        if ($baseReal !== false) {
-            $resolved = realpath($candidate);
-
-            if ($resolved !== false) {
-                $prefix = rtrim($baseReal, '/\\') . DIRECTORY_SEPARATOR;
-
-                if ($resolved !== $baseReal && strpos($resolved, $prefix) !== 0) {
-                    throw new \InvalidArgumentException("Invalid view name [$filename]: resolved path escapes view folder.");
-                }
-
-                return $resolved;
-            }
-        }
-
-        return $candidate;
+        return $resolved;
     }
 
     /**
-     * @return array
+     * Get template data
+     *
+     * Returns the variables currently available to templates.
+     *
+     * @return array Current template variables.
      */
     public function getTemplateData(): array
     {
@@ -165,8 +174,12 @@ class View implements ViewInterface
     }
 
     /**
-     * @param array $templateData
-     * @return View
+     * Set template data
+     *
+     * Replaces the variables available to templates.
+     *
+     * @param array $templateData Template variables.
+     * @return static
      */
     public function setTemplateData(array $templateData): static
     {
@@ -176,7 +189,11 @@ class View implements ViewInterface
     }
 
     /**
-     * @return $this
+     * Reset template data
+     *
+     * Clears all variables available to templates.
+     *
+     * @return static
      */
     public function resetTemplateData(): static
     {
@@ -186,8 +203,12 @@ class View implements ViewInterface
     }
 
     /**
-     * @param array $data
-     * @return $this
+     * Add template data
+     *
+     * Merges the given variables into the current template data.
+     *
+     * @param array $data Additional template variables.
+     * @return static
      */
     public function addTemplateData(array $data): static
     {
@@ -199,7 +220,15 @@ class View implements ViewInterface
     }
 
     /**
-     * @inheritDoc
+     * Inject view
+     *
+     * Renders a partial inside the current template without leaking
+     * its data into sibling or parent templates.
+     *
+     * @param string $filename View name to inject.
+     * @param array $data Additional variables for the partial.
+     * @return static
+     * @throws Exception for missing template.
      */
     public function inject(string $filename, array $data = []): static
     {
@@ -225,7 +254,12 @@ class View implements ViewInterface
     }
 
     /**
-     * @inheritDoc
+     * Build URL
+     *
+     * Joins the base URL with the given suffix, normalizing slashes.
+     *
+     * @param string $urlSuffix Path to append to the base URL.
+     * @return string Joined URL.
      */
     public function url(string $urlSuffix): string
     {
@@ -239,7 +273,12 @@ class View implements ViewInterface
     }
 
     /**
-     * @inheritDoc
+     * Escape value
+     *
+     * Escapes a value for safe HTML output using UTF-8.
+     *
+     * @param mixed $value Value to escape.
+     * @return string Escaped HTML string.
      */
     public function e(mixed $value): string
     {
@@ -251,7 +290,13 @@ class View implements ViewInterface
     }
 
     /**
-     * @inheritDoc
+     * Escape variable
+     *
+     * Escapes a named template variable for safe HTML output.
+     *
+     * @param string $var Name of the template variable.
+     * @return string Escaped HTML string.
+     * @throws Exception when the variable is not defined.
      */
     public function escape(string $var): string
     {
@@ -265,7 +310,11 @@ class View implements ViewInterface
     }
 
     /**
-     * @inheritDoc
+     * Get base URL
+     *
+     * Returns the base URL used for URL generation.
+     *
+     * @return string|false Base URL or false when not set.
      */
     public function getBaseUrl(): string|false
     {
@@ -273,7 +322,12 @@ class View implements ViewInterface
     }
 
     /**
-     * @inheritDoc
+     * Set base URL
+     *
+     * Sets the base URL used for URL generation.
+     *
+     * @param string|false $baseUrl Base URL or false to disable it.
+     * @return static
      */
     public function setBaseUrl(string|false $baseUrl): static
     {
