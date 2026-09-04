@@ -111,10 +111,77 @@ class ViewTest extends TestCase
         $data = [
             'content' => 'nested',
         ];
-        $result = $viewInstance->compile('nested.nested', $data);
+        $result = $viewInstance->compile('nested/nested', $data);
 
         $this->assertNotEmpty($result);
         $this->assertStringContainsString('nested', $result);
+    }
+
+    public function testShouldResolveSlashAsCanonicalSeparator()
+    {
+        $viewInstance = $this->getInstance();
+        $deprecations = [];
+        set_error_handler(function ($errno, $errstr) use (&$deprecations) {
+            $deprecations[] = $errstr;
+
+            return true;
+        }, E_USER_DEPRECATED);
+
+        try {
+            $result = $viewInstance->compile('nested/nested', ['content' => 'nested']);
+        } finally {
+            restore_error_handler();
+        }
+
+        $this->assertNotEmpty($result);
+        $this->assertStringContainsString('nested', $result);
+        $this->assertSame([], $deprecations, 'Canonical slash separator should not trigger deprecation');
+    }
+
+    public function testShouldSupportDotSeparatorAsDeprecatedAlias()
+    {
+        $viewInstance = $this->getInstance();
+        $deprecations = [];
+        set_error_handler(function ($errno, $errstr) use (&$deprecations) {
+            $deprecations[] = $errstr;
+
+            return true;
+        }, E_USER_DEPRECATED);
+
+        try {
+            $dotResult = $viewInstance->compile('nested.nested', ['content' => 'nested']);
+        } finally {
+            restore_error_handler();
+        }
+
+        $slashResult = $viewInstance->compile('nested/nested', ['content' => 'nested']);
+
+        $this->assertSame($slashResult, $dotResult);
+        $this->assertNotEmpty($deprecations, 'Dot separator should trigger deprecation');
+        $this->assertStringContainsString('deprecated', $deprecations[0]);
+    }
+
+    public function testShouldResolvePartialSlashAndDotToSameFile()
+    {
+        $viewInstance = $this->getInstance();
+        $slashResult = $viewInstance->compile('partials/header', ['title' => 'home page']);
+
+        $deprecations = [];
+        set_error_handler(function ($errno, $errstr) use (&$deprecations) {
+            $deprecations[] = $errstr;
+
+            return true;
+        }, E_USER_DEPRECATED);
+
+        try {
+            $dotResult = $viewInstance->compile('partials.header', ['title' => 'home page']);
+        } finally {
+            restore_error_handler();
+        }
+
+        $this->assertSame($slashResult, $dotResult);
+        $this->assertStringContainsString('home page', $slashResult);
+        $this->assertNotEmpty($deprecations, 'Dot separator should trigger deprecation');
     }
 
     public function testShouldRejectParentDirectoryTraversal()

@@ -80,9 +80,14 @@ $this->inject('partials/footer')
 For nested call
 
 ```php
-$view->compile('nested.template', $data);
+$view->compile('nested/template', $data);
 ```
 It will look for `nested` folder and `template.php` file.
+
+View names use `/` as the canonical separator.
+`partials/header` resolves to `partials/header.php`.
+The dot form `partials.header` resolves to the same file for backward compatibility, but it is deprecated and triggers `E_USER_DEPRECATED`.
+New code should use `/`.
 
 Expected unit test result 
 

@@ -74,6 +74,13 @@ class View implements ViewInterface
     /**
      * Get file path
      *
+     * View names use `/` as the canonical directory separator
+     * (e.g. `partials/header` resolves to `partials/header.php`).
+     *
+     * A `.` separator (e.g. `partials.header`) is still resolved the
+     * same way for backward compatibility, but it is deprecated and
+     * triggers `E_USER_DEPRECATED`. New code should use `/`.
+     *
      * @param string $filename
      * @return string
      * @throws \InvalidArgumentException for invalid view names
@@ -104,6 +111,8 @@ class View implements ViewInterface
             throw new \InvalidArgumentException("Invalid view name [$filename]: allowed characters are letters, numbers, _, -, / and .");
         }
 
+        // Canonical separator is `/`. A `.` is treated as an alias for `/`
+        // so `partials.header` and `partials/header` resolve to the same file.
         $isFilenameContainsDot = strpos($filename, '.') !== false;
 
         if ($this->viewFolder === null || $this->viewFolder === '') {
@@ -113,6 +122,10 @@ class View implements ViewInterface
         if (!$isFilenameContainsDot) {
             $candidate = $this->viewFolder . '/' . $filename . '.' . $this->fileExtension;
         } else {
+            trigger_error(
+                "View name [$filename]: dot separator is deprecated, use '/' instead (e.g. '" . str_replace('.', '/', $filename) . "').",
+                E_USER_DEPRECATED
+            );
             $updatedFilename = str_replace('.', '/', $filename);
 
             $candidate = $this->viewFolder . '/' . $updatedFilename . '.' . $this->fileExtension;
