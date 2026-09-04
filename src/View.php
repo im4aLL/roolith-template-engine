@@ -27,7 +27,11 @@ class View implements ViewInterface
      */
     public function setViewFolder(string $folderName): static
     {
-        $this->viewFolder = $folderName;
+        if ($folderName === '' || !is_dir($folderName)) {
+            throw new \InvalidArgumentException("Invalid view folder [$folderName]: directory does not exist.");
+        }
+
+        $this->viewFolder = rtrim($folderName, '/\\');
 
         return $this;
     }

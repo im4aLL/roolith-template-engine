@@ -33,6 +33,51 @@ class ViewTest extends TestCase
         $this->assertEquals($this->viewPath, $this->accessProtected($viewInstance, 'viewFolder'));
     }
 
+    public function testShouldHaveStringAndArrayTypeHints()
+    {
+        $method = new ReflectionMethod(View::class, 'setViewFolder');
+        $this->assertSame('string', (string) $method->getParameters()[0]->getType());
+
+        $method = new ReflectionMethod(View::class, 'compile');
+        $params = $method->getParameters();
+        $this->assertSame('string', (string) $params[0]->getType());
+        $this->assertSame('array', (string) $params[1]->getType());
+    }
+
+    public function testShouldNormalizeViewFolderTrailingSlash()
+    {
+        $viewInstance = new View($this->viewPath . '/');
+
+        $this->assertEquals($this->viewPath, $this->accessProtected($viewInstance, 'viewFolder'));
+
+        $result = $viewInstance->compile('home', ['content' => 'home content', 'title' => 'home page']);
+        $this->assertStringContainsString('home page', $result);
+    }
+
+    public function testShouldRejectInvalidViewFolder()
+    {
+        $viewInstance = new View($this->viewPath);
+
+        foreach (['', __DIR__ . '/does-not-exist', __FILE__] as $folder) {
+            try {
+                $viewInstance->setViewFolder($folder);
+                $this->fail("Expected InvalidArgumentException for view folder [$folder]");
+            } catch (\InvalidArgumentException $e) {
+                $this->assertStringContainsString('Invalid view folder', $e->getMessage());
+            }
+        }
+    }
+
+    public function testShouldRejectInvalidViewFolderInConstructor()
+    {
+        try {
+            new View(__DIR__ . '/does-not-exist');
+            $this->fail('Expected InvalidArgumentException for invalid view folder in constructor');
+        } catch (\InvalidArgumentException $e) {
+            $this->assertStringContainsString('Invalid view folder', $e->getMessage());
+        }
+    }
+
     public function testShouldEscapeVariable()
     {
         $viewInstance = $this->getInstance();
