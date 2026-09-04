@@ -6,51 +6,51 @@ use Roolith\Template\Engine\Exceptions\Exception;
 interface ViewInterface
 {
     /**
-     * @param $folderName string
+     * @param string $folderName
      * @return $this
      */
-    public function setViewFolder($folderName);
+    public function setViewFolder(string $folderName): static;
 
     /**
-     * @param $filename string
+     * @param string $filename
      * @param array $data
      * @return string
      * @throws Exception
      */
-    public function compile($filename, $data = []);
+    public function compile(string $filename, array $data = []): string;
 
     /**
-     * @param $filename
+     * @param string $filename
      * @param array $data
      * @return $this
      * @throws Exception
      */
-    public function inject($filename, $data = []);
+    public function inject(string $filename, array $data = []): static;
 
     /**
-     * @param $urlSuffix
+     * @param string $urlSuffix
      * @return string
      */
-    public function url($urlSuffix);
+    public function url(string $urlSuffix): string;
 
     /**
-     * @param $var
+     * @param string $var
      * @return string
      * @throws Exception
      */
-    public function escape($var);
+    public function escape(string $var): string;
 
     /**
      * Set base url
      *
      * @return $this
      */
-    public function setBaseUrl($baseUrl);
+    public function setBaseUrl(string|false $baseUrl): static;
 
     /**
      * Get base url
      *
      * @return false|string
      */
-    public function getBaseUrl();
+    public function getBaseUrl(): string|false;
 }

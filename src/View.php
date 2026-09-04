@@ -6,12 +6,12 @@ use Roolith\Template\Engine\Interfaces\ViewInterface;
 
 class View implements ViewInterface
 {
-    protected $viewFolder;
-    protected $fileExtension;
-    protected $templateData;
-    protected $baseUrl;
+    protected ?string $viewFolder = null;
+    protected string $fileExtension;
+    protected array $templateData;
+    protected string|false $baseUrl;
 
-    public function __construct($viewFolder = null)
+    public function __construct(?string $viewFolder = null)
     {
         $this->fileExtension = 'php';
         $this->baseUrl = false;
@@ -25,7 +25,7 @@ class View implements ViewInterface
     /**
      * @inheritDoc
      */
-    public function setViewFolder($folderName)
+    public function setViewFolder(string $folderName): static
     {
         $this->viewFolder = $folderName;
 
@@ -35,7 +35,7 @@ class View implements ViewInterface
     /**
      * @inheritDoc
      */
-    public function compile($filename, $data = [])
+    public function compile(string $filename, array $data = []): string
     {
         if ($this->viewExists($filename)) {
             $this->setTemplateData($data);
@@ -47,9 +47,10 @@ class View implements ViewInterface
             ob_end_clean();
 
             $this->resetTemplateData();
-            return $output;
+            return $output === false ? '' : $output;
         } else {
-            throw new Exception("$filename not exists!");
+            $path = $this->getFilePathByName($filename);
+            throw new Exception("$filename not exists! [resolved: $path]");
         }
     }
 
@@ -59,7 +60,7 @@ class View implements ViewInterface
      * @param $filename
      * @return bool
      */
-    private function viewExists($filename)
+    private function viewExists(string $filename): bool
     {
         return file_exists($this->getFilePathByName($filename));
     }
@@ -67,26 +68,73 @@ class View implements ViewInterface
     /**
      * Get file path
      *
-     * @param $filename
+     * @param string $filename
      * @return string
+     * @throws \InvalidArgumentException for invalid view names
      */
-    private function getFilePathByName($filename)
+    private function getFilePathByName(string $filename): string
     {
-        $isFilenameContainsDot = strpos($filename, '.') !== false;
-
-        if (!$isFilenameContainsDot) {
-            return $this->viewFolder . '/' . $filename . '.' . $this->fileExtension;
+        if ($filename === '') {
+            throw new \InvalidArgumentException('Invalid view name: must be a non-empty string.');
         }
 
-        $updatedFilename = str_replace('.', '/', $filename);
+        if (strpos($filename, ':') !== false) {
+            throw new \InvalidArgumentException("Invalid view name [$filename]: stream wrappers are not allowed.");
+        }
 
-        return $this->viewFolder . '/' . $updatedFilename . '.' . $this->fileExtension;
+        if ($filename[0] === '/' || $filename[0] === '\\') {
+            throw new \InvalidArgumentException("Invalid view name [$filename]: absolute paths are not allowed.");
+        }
+
+        if (strpos($filename, '\\') !== false) {
+            throw new \InvalidArgumentException("Invalid view name [$filename]: backslash separators are not allowed.");
+        }
+
+        if (strpos($filename, '..') !== false) {
+            throw new \InvalidArgumentException("Invalid view name [$filename]: parent directory segments are not allowed.");
+        }
+
+        if (!preg_match('#^[A-Za-z0-9_-]+(?:[./][A-Za-z0-9_-]+)*$#', $filename)) {
+            throw new \InvalidArgumentException("Invalid view name [$filename]: allowed characters are letters, numbers, _, -, / and .");
+        }
+
+        $isFilenameContainsDot = strpos($filename, '.') !== false;
+
+        if ($this->viewFolder === null || $this->viewFolder === '') {
+            throw new \InvalidArgumentException('Invalid view folder: must be a non-empty string.');
+        }
+
+        if (!$isFilenameContainsDot) {
+            $candidate = $this->viewFolder . '/' . $filename . '.' . $this->fileExtension;
+        } else {
+            $updatedFilename = str_replace('.', '/', $filename);
+
+            $candidate = $this->viewFolder . '/' . $updatedFilename . '.' . $this->fileExtension;
+        }
+
+        $baseReal = realpath($this->viewFolder);
+
+        if ($baseReal !== false) {
+            $resolved = realpath($candidate);
+
+            if ($resolved !== false) {
+                $prefix = rtrim($baseReal, '/\\') . DIRECTORY_SEPARATOR;
+
+                if ($resolved !== $baseReal && strpos($resolved, $prefix) !== 0) {
+                    throw new \InvalidArgumentException("Invalid view name [$filename]: resolved path escapes view folder.");
+                }
+
+                return $resolved;
+            }
+        }
+
+        return $candidate;
     }
 
     /**
      * @return array
      */
-    public function getTemplateData()
+    public function getTemplateData(): array
     {
         return $this->templateData;
     }
@@ -95,7 +143,7 @@ class View implements ViewInterface
      * @param array $templateData
      * @return View
      */
-    public function setTemplateData($templateData)
+    public function setTemplateData(array $templateData): static
     {
         $this->templateData = $templateData;
 
@@ -105,7 +153,7 @@ class View implements ViewInterface
     /**
      * @return $this
      */
-    public function resetTemplateData()
+    public function resetTemplateData(): static
     {
         $this->templateData = [];
 
@@ -113,10 +161,10 @@ class View implements ViewInterface
     }
 
     /**
-     * @param $data
+     * @param array $data
      * @return $this
      */
-    public function addTemplateData($data)
+    public function addTemplateData(array $data): static
     {
         $array = array_merge($this->getTemplateData(), $data);
 
@@ -128,7 +176,7 @@ class View implements ViewInterface
     /**
      * @inheritDoc
      */
-    public function inject($filename, $data = [])
+    public function inject(string $filename, array $data = []): static
     {
         if (count($data) > 0) {
             $this->addTemplateData($data);
@@ -138,7 +186,8 @@ class View implements ViewInterface
             extract($this->getTemplateData(), EXTR_SKIP);
             include($this->getFilePathByName($filename));
         } else {
-            throw new Exception("$filename not exists!");
+            $path = $this->getFilePathByName($filename);
+            throw new Exception("$filename not exists! [resolved: $path]");
         }
 
         return $this;
@@ -147,7 +196,7 @@ class View implements ViewInterface
     /**
      * @inheritDoc
      */
-    public function url($urlSuffix)
+    public function url(string $urlSuffix): string
     {
         $baseUrl = $this->getBaseUrl();
         $urlPrefix = $baseUrl ? $baseUrl : '/';
@@ -158,7 +207,7 @@ class View implements ViewInterface
     /**
      * @inheritDoc
      */
-    public function escape($var)
+    public function escape(string $var): string
     {
         extract($this->getTemplateData(), EXTR_SKIP);
 
@@ -166,13 +215,13 @@ class View implements ViewInterface
             throw new Exception('$' .$var . ' not defined!');
         }
 
-        return htmlspecialchars(${$var}, ENT_QUOTES);
+        return htmlspecialchars((string) ${$var}, ENT_QUOTES, 'UTF-8');
     }
 
     /**
      * @inheritDoc
      */
-    public function getBaseUrl()
+    public function getBaseUrl(): string|false
     {
         return $this->baseUrl;
     }
@@ -180,7 +229,7 @@ class View implements ViewInterface
     /**
      * @inheritDoc
      */
-    public function setBaseUrl($baseUrl)
+    public function setBaseUrl(string|false $baseUrl): static
     {
         $this->baseUrl = $baseUrl;
 

@@ -80,4 +80,61 @@ class ViewTest extends TestCase
         $this->assertNotEmpty($result);
         $this->assertStringContainsString('nested', $result);
     }
+
+    public function testShouldRejectParentDirectoryTraversal()
+    {
+        $viewInstance = $this->getInstance();
+
+        foreach (['..', '../composer', 'nested/../home', 'nested..nested'] as $name) {
+            try {
+                $viewInstance->compile($name);
+                $this->fail("Expected InvalidArgumentException for view name [$name]");
+            } catch (\InvalidArgumentException $e) {
+                $this->assertStringContainsString('Invalid view name', $e->getMessage());
+            }
+        }
+    }
+
+    public function testShouldRejectAbsolutePaths()
+    {
+        $viewInstance = $this->getInstance();
+
+        foreach (['/etc/hostname', '/home', '\\windows\\secret'] as $name) {
+            try {
+                $viewInstance->compile($name);
+                $this->fail("Expected InvalidArgumentException for view name [$name]");
+            } catch (\InvalidArgumentException $e) {
+                $this->assertStringContainsString('Invalid view name', $e->getMessage());
+            }
+        }
+    }
+
+    public function testShouldRejectStreamWrappers()
+    {
+        $viewInstance = $this->getInstance();
+
+        foreach (['php://filter/convert.base64-encode/resource=home', 'file:///etc/hostname', 'home:evil', 'data://text/plain,hi'] as $name) {
+            try {
+                $viewInstance->compile($name);
+                $this->fail("Expected InvalidArgumentException for view name [$name]");
+            } catch (\InvalidArgumentException $e) {
+                $this->assertStringContainsString('Invalid view name', $e->getMessage());
+            }
+        }
+    }
+
+    public function testMissingTemplateMessageShouldContainResolvedPath()
+    {
+        $viewInstance = $this->getInstance();
+
+        try {
+            $viewInstance->compile('file-doesnt-exists');
+            $this->fail('Expected Exception for missing template');
+        } catch (\InvalidArgumentException $e) {
+            $this->fail('Missing template should throw Exception, not InvalidArgumentException');
+        } catch (\Roolith\Template\Engine\Exceptions\Exception $e) {
+            $this->assertStringContainsString('file-doesnt-exists', $e->getMessage());
+            $this->assertStringContainsString('resolved:', $e->getMessage());
+        }
+    }
 }
