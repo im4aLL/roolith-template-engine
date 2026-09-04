@@ -18,6 +18,5 @@
     },
     "autoload": {
         "psr-4": {"Roolith\\Template\\Engine\\": "src/"}
-    },
-    "version": "1.0.4"
+    }
 }
