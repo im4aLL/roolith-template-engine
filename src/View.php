@@ -2,19 +2,19 @@
 namespace Roolith\Template\Engine;
 
 use Roolith\Template\Engine\Exceptions\Exception;
+use Roolith\Template\Engine\Exceptions\InvalidArgumentException;
 use Roolith\Template\Engine\Interfaces\ViewInterface;
 
 /**
  * View
  *
  * Renders PHP templates with output buffering. Path resolution is
- * delegated to TemplatePathResolver. This class remains the
- * backward compatible facade for rendering.
+ * delegated to TemplatePathResolver, which is the source of truth
+ * for view folder and file extension.
  */
 class View implements ViewInterface
 {
     protected ?string $viewFolder = null;
-    protected string $fileExtension;
     protected array $templateData;
     protected string|false $baseUrl;
     protected TemplatePathResolver $pathResolver;
@@ -30,12 +30,10 @@ class View implements ViewInterface
      */
     public function __construct(?string $viewFolder = null, ?TemplatePathResolver $resolver = null)
     {
-        $this->fileExtension = 'php';
         $this->baseUrl = false;
         $this->templateData = [];
         $this->pathResolver = $resolver ?? new TemplatePathResolver();
 
-        $this->fileExtension = $this->pathResolver->getFileExtension();
         $this->viewFolder = $this->pathResolver->getViewFolder();
 
         if ($viewFolder) {
@@ -46,17 +44,16 @@ class View implements ViewInterface
     /**
      * Set view folder
      *
-     * Validates the folder through the path resolver and syncs local state.
+     * Validates the folder through the path resolver and mirrors it locally for backward compatibility.
      *
      * @param string $folderName Base directory for views.
      * @return static
-     * @throws \InvalidArgumentException for invalid view folder.
+     * @throws InvalidArgumentException for invalid view folder.
      */
     public function setViewFolder(string $folderName): static
     {
         $this->pathResolver->setViewFolder($folderName);
         $this->viewFolder = $this->pathResolver->getViewFolder();
-        $this->fileExtension = $this->pathResolver->getFileExtension();
 
         return $this;
     }
@@ -76,7 +73,7 @@ class View implements ViewInterface
     /**
      * Set path resolver
      *
-     * Replaces the active resolver and syncs local view folder state.
+     * Replaces the active resolver and mirrors its view folder locally for backward compatibility.
      *
      * @param TemplatePathResolver $resolver Path resolver to use.
      * @return static
@@ -85,7 +82,6 @@ class View implements ViewInterface
     {
         $this->pathResolver = $resolver;
         $this->viewFolder = $resolver->getViewFolder();
-        $this->fileExtension = $resolver->getFileExtension();
 
         return $this;
     }
@@ -99,6 +95,7 @@ class View implements ViewInterface
      * @param array $data Template variables.
      * @return string Rendered template output.
      * @throws Exception for missing template.
+     * @throws InvalidArgumentException for invalid view names.
      */
     public function compile(string $filename, array $data = []): string
     {
@@ -108,11 +105,10 @@ class View implements ViewInterface
             $level = ob_get_level();
             ob_start();
             try {
-                extract($this->getTemplateData(), EXTR_SKIP);
-                include($this->getFilePathByName($filename));
+                $this->renderFile($this->getFilePathByName($filename), $this->getTemplateData());
                 $output = ob_get_clean();
             } finally {
-                if (ob_get_level() > $level) {
+                while (ob_get_level() > $level) {
                     ob_end_clean();
                 }
                 $this->resetTemplateData();
@@ -123,6 +119,23 @@ class View implements ViewInterface
             $path = $this->getFilePathByName($filename);
             throw new Exception("View [$filename] does not exist. [resolved: $path]");
         }
+    }
+
+    /**
+     * Render file in isolated scope
+     *
+     * Extracts template data with obscure locals so data keys like
+     * `filename`, `data`, `level`, `output` or `path` remain readable
+     * inside templates instead of colliding with renderer locals.
+     *
+     * @param string $__file Template file path.
+     * @param array $__data Template variables.
+     * @return void
+     */
+    private function renderFile(string $__file, array $__data): void
+    {
+        extract($__data, EXTR_OVERWRITE);
+        include $__file;
     }
 
     /**
@@ -150,13 +163,12 @@ class View implements ViewInterface
      *
      * @param string $filename View name to resolve.
      * @return string Resolved template file path.
-     * @throws \InvalidArgumentException for invalid view names
+     * @throws InvalidArgumentException for invalid view names
      */
     private function getFilePathByName(string $filename): string
     {
         $resolved = $this->pathResolver->resolve($filename);
         $this->viewFolder = $this->pathResolver->getViewFolder();
-        $this->fileExtension = $this->pathResolver->getFileExtension();
 
         return $resolved;
     }
@@ -229,6 +241,7 @@ class View implements ViewInterface
      * @param array $data Additional variables for the partial.
      * @return static
      * @throws Exception for missing template.
+     * @throws InvalidArgumentException for invalid view names.
      */
     public function inject(string $filename, array $data = []): static
     {
@@ -240,8 +253,7 @@ class View implements ViewInterface
 
         try {
             if ($this->viewExists($filename)) {
-                extract($this->getTemplateData(), EXTR_SKIP);
-                include($this->getFilePathByName($filename));
+                $this->renderFile($this->getFilePathByName($filename), $this->getTemplateData());
             } else {
                 $path = $this->getFilePathByName($filename);
                 throw new Exception("View [$filename] does not exist. [resolved: $path]");
@@ -276,14 +288,24 @@ class View implements ViewInterface
      * Escape value
      *
      * Escapes a value for safe HTML output using UTF-8.
+     * Only scalar values, null and stringable objects are supported.
      *
      * @param mixed $value Value to escape.
      * @return string Escaped HTML string.
+     * @throws InvalidArgumentException for arrays or non-stringable objects.
      */
     public function e(mixed $value): string
     {
-        if ($value === null) {
+        if ($value === null || $value === false) {
             return '';
+        }
+
+        if (is_array($value)) {
+            throw new InvalidArgumentException('Escape expects scalar, null or stringable value, array given.');
+        }
+
+        if (is_object($value) && !method_exists($value, '__toString')) {
+            throw new InvalidArgumentException('Escape expects stringable object, non-stringable object given.');
         }
 
         return htmlspecialchars((string) $value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');

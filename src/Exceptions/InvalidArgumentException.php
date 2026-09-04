@@ -2,7 +2,7 @@
 namespace Roolith\Template\Engine\Exceptions;
 
 
-class InvalidArgumentException extends Exception
+class InvalidArgumentException extends \InvalidArgumentException
 {
 
 }

@@ -1,6 +1,8 @@
 <?php
 namespace Roolith\Template\Engine;
 
+use Roolith\Template\Engine\Exceptions\InvalidArgumentException;
+
 /**
  * Template path resolver
  *
@@ -36,12 +38,12 @@ class TemplatePathResolver
      *
      * @param string $folderName Base directory for views.
      * @return static
-     * @throws \InvalidArgumentException for invalid view folder.
+     * @throws InvalidArgumentException for invalid view folder.
      */
     public function setViewFolder(string $folderName): static
     {
         if ($folderName === '' || !is_dir($folderName)) {
-            throw new \InvalidArgumentException("Invalid view folder [$folderName]: directory does not exist.");
+            throw new InvalidArgumentException("Invalid view folder [$folderName]: directory does not exist.");
         }
 
         $this->viewFolder = rtrim($folderName, '/\\');
@@ -68,12 +70,12 @@ class TemplatePathResolver
      *
      * @param string $fileExtension Template file extension with or without leading dot.
      * @return static
-     * @throws \InvalidArgumentException for empty extension.
+     * @throws InvalidArgumentException for empty extension.
      */
     public function setFileExtension(string $fileExtension): static
     {
         if ($fileExtension === '') {
-            throw new \InvalidArgumentException('Invalid file extension: must be a non-empty string.');
+            throw new InvalidArgumentException('Invalid file extension: must be a non-empty string.');
         }
 
         $this->fileExtension = ltrim($fileExtension, '.');
@@ -105,32 +107,32 @@ class TemplatePathResolver
      *
      * @param string $filename View name to resolve.
      * @return string Resolved template file path.
-     * @throws \InvalidArgumentException for invalid view names
+     * @throws InvalidArgumentException for invalid view names
      */
     public function resolve(string $filename): string
     {
         if ($filename === '') {
-            throw new \InvalidArgumentException('Invalid view name: must be a non-empty string.');
+            throw new InvalidArgumentException('Invalid view name: must be a non-empty string.');
         }
 
         if (strpos($filename, ':') !== false) {
-            throw new \InvalidArgumentException("Invalid view name [$filename]: stream wrappers are not allowed.");
+            throw new InvalidArgumentException("Invalid view name [$filename]: stream wrappers are not allowed.");
         }
 
         if ($filename[0] === '/' || $filename[0] === '\\') {
-            throw new \InvalidArgumentException("Invalid view name [$filename]: absolute paths are not allowed.");
+            throw new InvalidArgumentException("Invalid view name [$filename]: absolute paths are not allowed.");
         }
 
         if (strpos($filename, '\\') !== false) {
-            throw new \InvalidArgumentException("Invalid view name [$filename]: backslash separators are not allowed.");
+            throw new InvalidArgumentException("Invalid view name [$filename]: backslash separators are not allowed.");
         }
 
         if (strpos($filename, '..') !== false) {
-            throw new \InvalidArgumentException("Invalid view name [$filename]: parent directory segments are not allowed.");
+            throw new InvalidArgumentException("Invalid view name [$filename]: parent directory segments are not allowed.");
         }
 
         if (!preg_match('#^[A-Za-z0-9_-]+(?:[./][A-Za-z0-9_-]+)*$#', $filename)) {
-            throw new \InvalidArgumentException("Invalid view name [$filename]: allowed characters are letters, numbers, _, -, / and .");
+            throw new InvalidArgumentException("Invalid view name [$filename]: allowed characters are letters, numbers, _, -, / and .");
         }
 
         // Canonical separator is `/`. A `.` is treated as an alias for `/`
@@ -138,7 +140,7 @@ class TemplatePathResolver
         $isFilenameContainsDot = strpos($filename, '.') !== false;
 
         if ($this->viewFolder === null || $this->viewFolder === '') {
-            throw new \InvalidArgumentException('Invalid view folder: must be a non-empty string.');
+            throw new InvalidArgumentException('Invalid view folder: must be a non-empty string.');
         }
 
         if (!$isFilenameContainsDot) {
@@ -164,7 +166,7 @@ class TemplatePathResolver
                 $prefix = rtrim($baseReal, '/\\') . DIRECTORY_SEPARATOR;
 
                 if ($resolved !== $baseReal && strpos($resolved, $prefix) !== 0) {
-                    throw new \InvalidArgumentException("Invalid view name [$filename]: resolved path escapes view folder.");
+                    throw new InvalidArgumentException("Invalid view name [$filename]: resolved path escapes view folder.");
                 }
 
                 return $resolved;

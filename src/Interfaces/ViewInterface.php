@@ -6,7 +6,11 @@ use Roolith\Template\Engine\Exceptions\Exception;
 /**
  * View interface
  *
- * Defines the contract for rendering PHP templates.
+ * Defines the minimal contract for rendering PHP templates.
+ * The concrete View class exposes additional seams for testing and
+ * composition (getPathResolver, setPathResolver, getTemplateData,
+ * setTemplateData, resetTemplateData, addTemplateData) which are
+ * intentionally not part of this minimal contract to keep it narrow.
  */
 interface ViewInterface
 {

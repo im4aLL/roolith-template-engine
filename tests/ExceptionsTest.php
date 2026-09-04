@@ -13,11 +13,11 @@ class ExceptionsTest extends TestCase
         $this->assertSame('oops', $e->getMessage());
     }
 
-    public function testInvalidArgumentExceptionShouldExtendTemplateException()
+    public function testInvalidArgumentExceptionShouldExtendSplInvalidArgumentException()
     {
         $e = new InvalidArgumentException('bad arg');
 
-        $this->assertInstanceOf(Exception::class, $e);
+        $this->assertInstanceOf(\InvalidArgumentException::class, $e);
         $this->assertInstanceOf(\Exception::class, $e);
         $this->assertSame('bad arg', $e->getMessage());
     }
