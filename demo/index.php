@@ -1,4 +1,7 @@
 <?php
+use Roolith\Template\Engine\Exceptions\Exception;
+use Roolith\Template\Engine\Exceptions\InvalidArgumentException;
+
 require_once __DIR__ .'/../vendor/autoload.php';
 
 $view = new \Roolith\Template\Engine\View(__DIR__ . '/views');
@@ -10,6 +13,6 @@ try {
     ];
 
     echo $view->compile('home', $data);
-} catch (\Roolith\Template\Engine\Exceptions\Exception | \Roolith\Template\Engine\Exceptions\InvalidArgumentException $e) {
+} catch (Exception | InvalidArgumentException $e) {
     echo $e->getMessage();
 }
