@@ -3,7 +3,7 @@ No overcomplicated stuff! Just plain PHP in template file. No `eval`, it uses ou
 
 #### Install
 ```
-composer install roolith/template-engine
+composer require roolith/template-engine
 ```
 
 #### Usage
