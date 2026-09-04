@@ -123,6 +123,22 @@ class ViewTest extends TestCase
         }
     }
 
+    public function testShouldRestoreBufferLevelAfterThrowingTemplate()
+    {
+        $viewInstance = $this->getInstance();
+        $levelBefore = ob_get_level();
+
+        try {
+            $viewInstance->compile('throwing', ['foo' => 'bar']);
+            $this->fail('Expected RuntimeException from throwing template');
+        } catch (\RuntimeException $e) {
+            $this->assertSame('template failure', $e->getMessage());
+        }
+
+        $this->assertSame($levelBefore, ob_get_level(), 'Output buffer level should be restored after throwing template');
+        $this->assertSame([], $viewInstance->getTemplateData(), 'Template data should be reset after throwing template');
+    }
+
     public function testMissingTemplateMessageShouldContainResolvedPath()
     {
         $viewInstance = $this->getInstance();

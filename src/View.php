@@ -40,13 +40,19 @@ class View implements ViewInterface
         if ($this->viewExists($filename)) {
             $this->setTemplateData($data);
 
+            $level = ob_get_level();
             ob_start();
-            extract($this->getTemplateData(), EXTR_SKIP);
-            include($this->getFilePathByName($filename));
-            $output = ob_get_contents();
-            ob_end_clean();
+            try {
+                extract($this->getTemplateData(), EXTR_SKIP);
+                include($this->getFilePathByName($filename));
+                $output = ob_get_clean();
+            } finally {
+                if (ob_get_level() > $level) {
+                    ob_end_clean();
+                }
+                $this->resetTemplateData();
+            }
 
-            $this->resetTemplateData();
             return $output === false ? '' : $output;
         } else {
             $path = $this->getFilePathByName($filename);
