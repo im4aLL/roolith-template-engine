@@ -1,6 +1,8 @@
 <?php
 use PHPUnit\Framework\TestCase;
+use Roolith\Template\Engine\Exceptions\Exception;
 use Roolith\Template\Engine\Interfaces\ViewInterface;
+use Roolith\Template\Engine\TemplatePathResolver;
 use Roolith\Template\Engine\View;
 
 class ViewTest extends TestCase
@@ -357,5 +359,175 @@ class ViewTest extends TestCase
         $this->assertStringContainsString('CLEAN', $second);
         $this->assertStringNotContainsString('LEAKED', $second);
         $this->assertSame([], $viewInstance->getTemplateData());
+    }
+
+    public function testShouldThrowForMissingInjectedPartialAndRestoreTemplateData()
+    {
+        $viewInstance = $this->getInstance();
+        $viewInstance->setTemplateData(['keep' => 'yes']);
+
+        try {
+            $viewInstance->inject('does-not-exist');
+            $this->fail('Expected Exception for missing injected partial');
+        } catch (Exception $e) {
+            $this->assertStringContainsString('does-not-exist', $e->getMessage());
+            $this->assertStringContainsString('resolved:', $e->getMessage());
+        }
+
+        $this->assertSame(['keep' => 'yes'], $viewInstance->getTemplateData());
+    }
+
+    public function testShouldManageTemplateData()
+    {
+        $viewInstance = $this->getInstance();
+
+        $this->assertSame([], $viewInstance->getTemplateData());
+
+        $viewInstance->setTemplateData(['a' => 1]);
+        $this->assertSame(['a' => 1], $viewInstance->getTemplateData());
+
+        $viewInstance->addTemplateData(['b' => 2]);
+        $this->assertSame(['a' => 1, 'b' => 2], $viewInstance->getTemplateData());
+
+        $viewInstance->addTemplateData(['a' => 99]);
+        $this->assertSame(['a' => 99, 'b' => 2], $viewInstance->getTemplateData());
+
+        $viewInstance->resetTemplateData();
+        $this->assertSame([], $viewInstance->getTemplateData());
+    }
+
+    public function testShouldEscapeScalarValues()
+    {
+        $viewInstance = $this->getInstance();
+
+        $this->assertSame('123', $viewInstance->e(123));
+        $this->assertSame('0', $viewInstance->e(0));
+        $this->assertSame('3.14', $viewInstance->e(3.14));
+        $this->assertSame('1', $viewInstance->e(true));
+        $this->assertSame('', $viewInstance->e(false));
+        $this->assertSame('&lt;b&gt;', $viewInstance->e('<b>'));
+
+        $viewInstance->setTemplateData(['count' => 42]);
+        $this->assertSame('42', $viewInstance->escape('count'));
+    }
+
+    public function testShouldEscapeStringableObject()
+    {
+        $viewInstance = $this->getInstance();
+
+        $object = new class {
+            public function __toString(): string
+            {
+                return '<b>hi</b>';
+            }
+        };
+
+        $this->assertSame('&lt;b&gt;hi&lt;/b&gt;', $viewInstance->e($object));
+    }
+
+    public function testShouldDefaultBaseUrlToFalseAndAllowReset()
+    {
+        $viewInstance = $this->getInstance();
+        $this->assertFalse($viewInstance->getBaseUrl());
+
+        $viewInstance->setBaseUrl('http://example.com');
+        $this->assertSame('http://example.com', $viewInstance->getBaseUrl());
+
+        $viewInstance->setBaseUrl(false);
+        $this->assertFalse($viewInstance->getBaseUrl());
+        $this->assertSame('/assets/a.txt', $viewInstance->url('assets/a.txt'));
+    }
+
+    public function testShouldHandleEmptyUrlSuffix()
+    {
+        $viewInstance = $this->getInstance();
+
+        $this->assertSame('/', $viewInstance->url(''));
+
+        $viewInstance->setBaseUrl('http://example.com');
+        $this->assertSame('http://example.com/', $viewInstance->url(''));
+
+        $viewInstance->setBaseUrl('http://example.com/');
+        $this->assertSame('http://example.com/', $viewInstance->url(''));
+    }
+
+    public function testShouldFailCompileWithoutViewFolder()
+    {
+        $viewInstance = new View();
+
+        $this->assertNull($viewInstance->getPathResolver()->getViewFolder());
+
+        try {
+            $viewInstance->compile('home');
+            $this->fail('Expected InvalidArgumentException when view folder is not set');
+        } catch (\InvalidArgumentException $e) {
+            $this->assertStringContainsString('Invalid view folder', $e->getMessage());
+        }
+    }
+
+    public function testShouldPropagateCustomExtensionFromResolver()
+    {
+        $resolver = new TemplatePathResolver($this->viewPath, 'phtml');
+        $viewInstance = new View(null, $resolver);
+
+        $this->assertSame('phtml', $viewInstance->getPathResolver()->getFileExtension());
+        $this->assertStringEndsWith('home.phtml', $viewInstance->getPathResolver()->resolve('home'));
+
+        $viewInstance->setPathResolver(new TemplatePathResolver($this->viewPath, 'phtml'));
+        $this->assertSame('phtml', $viewInstance->getPathResolver()->getFileExtension());
+    }
+
+    public function testConstructorFolderShouldOverrideDifferentResolverFolder()
+    {
+        $resolver = new TemplatePathResolver($this->viewPath);
+        $nestedFolder = $this->viewPath . '/nested';
+        $viewInstance = new View($nestedFolder, $resolver);
+
+        $this->assertSame($nestedFolder, $viewInstance->getPathResolver()->getViewFolder());
+
+        $result = $viewInstance->compile('nested', ['content' => 'nested']);
+        $this->assertStringContainsString('nested', $result);
+    }
+
+    public function testShouldNotOverwriteLocalsViaCollidingDataKeys()
+    {
+        $viewInstance = $this->getInstance();
+
+        $result = $viewInstance->compile('home', [
+            'content' => 'hi',
+            'title' => 't',
+            'filename' => 'COLLIDE',
+            'data' => 'COLLIDE',
+            'level' => 'COLLIDE',
+            'output' => 'COLLIDE',
+            'path' => 'COLLIDE',
+        ]);
+
+        $this->assertStringContainsString('hi', $result);
+        $this->assertSame([], $viewInstance->getTemplateData());
+    }
+
+    public function testShouldRestoreBufferLevelAfterSuccessfulCompile()
+    {
+        $viewInstance = $this->getInstance();
+        $levelBefore = ob_get_level();
+
+        $viewInstance->compile('home', ['content' => 'c', 'title' => 't']);
+
+        $this->assertSame($levelBefore, ob_get_level());
+        $this->assertSame([], $viewInstance->getTemplateData());
+    }
+
+    public function testShouldImplementViewInterfaceFully()
+    {
+        $viewInstance = $this->getInstance();
+        $this->assertInstanceOf(ViewInterface::class, $viewInstance);
+
+        foreach (['setViewFolder', 'compile', 'inject', 'url', 'e', 'escape', 'setBaseUrl', 'getBaseUrl'] as $method) {
+            $this->assertTrue(method_exists($viewInstance, $method), "View should implement $method");
+        }
+
+        $this->assertTrue((new ReflectionMethod(View::class, 'inject'))->hasReturnType());
+        $this->assertTrue((new ReflectionMethod(View::class, 'e'))->hasReturnType());
     }
 }

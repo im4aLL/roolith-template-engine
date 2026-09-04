@@ -242,4 +242,52 @@ class TemplatePathResolverTest extends TestCase
         $result = $view->compile('home', ['content' => 'home content', 'title' => 'home page']);
         $this->assertStringContainsString('home page', $result);
     }
+
+    public function testShouldRejectEmptyFileExtension()
+    {
+        $resolver = $this->makeResolver();
+
+        try {
+            $resolver->setFileExtension('');
+            $this->fail('Expected InvalidArgumentException for empty file extension');
+        } catch (\InvalidArgumentException $e) {
+            $this->assertStringContainsString('Invalid file extension', $e->getMessage());
+        }
+    }
+
+    public function testShouldDefaultToPhpExtension()
+    {
+        $resolver = new TemplatePathResolver();
+
+        $this->assertSame('php', $resolver->getFileExtension());
+        $this->assertNull($resolver->getViewFolder());
+    }
+
+    public function testShouldResolveNamesWithHyphenUnderscoreAndNumbers()
+    {
+        $resolver = $this->makeResolver();
+
+        foreach (['my-view_123', 'A1/b-2_c3', 'nested/nested'] as $name) {
+            $path = $resolver->resolve($name);
+            $this->assertStringEndsWith(str_replace('/', '/', $name) . '.php', $path);
+        }
+
+        $this->assertFileExists($resolver->resolve('nested/nested'));
+        $this->assertFileDoesNotExist($resolver->resolve('my-view_123'));
+    }
+
+    public function testShouldNormalizeFileExtensionVariants()
+    {
+        $resolver = $this->makeResolver();
+
+        $resolver->setFileExtension('phtml');
+        $this->assertSame('phtml', $resolver->getFileExtension());
+
+        $resolver->setFileExtension('.phtml');
+        $this->assertSame('phtml', $resolver->getFileExtension());
+        $this->assertStringEndsWith('home.phtml', $resolver->resolve('home'));
+
+        $resolver->setFileExtension('php');
+        $this->assertSame('php', $resolver->getFileExtension());
+    }
 }
