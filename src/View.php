@@ -184,16 +184,22 @@ class View implements ViewInterface
      */
     public function inject(string $filename, array $data = []): static
     {
+        $savedTemplateData = $this->getTemplateData();
+
         if (count($data) > 0) {
             $this->addTemplateData($data);
         }
 
-        if ($this->viewExists($filename)) {
-            extract($this->getTemplateData(), EXTR_SKIP);
-            include($this->getFilePathByName($filename));
-        } else {
-            $path = $this->getFilePathByName($filename);
-            throw new Exception("$filename not exists! [resolved: $path]");
+        try {
+            if ($this->viewExists($filename)) {
+                extract($this->getTemplateData(), EXTR_SKIP);
+                include($this->getFilePathByName($filename));
+            } else {
+                $path = $this->getFilePathByName($filename);
+                throw new Exception("$filename not exists! [resolved: $path]");
+            }
+        } finally {
+            $this->setTemplateData($savedTemplateData);
         }
 
         return $this;

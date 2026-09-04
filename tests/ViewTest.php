@@ -153,4 +153,26 @@ class ViewTest extends TestCase
             $this->assertStringContainsString('resolved:', $e->getMessage());
         }
     }
+
+    public function testShouldNotLeakInjectDataBetweenSiblingPartials()
+    {
+        $viewInstance = $this->getInstance();
+        $result = $viewInstance->compile('leak-siblings');
+
+        $this->assertStringContainsString('CLEAN', $result);
+        $this->assertStringNotContainsString('LEAKED', $result);
+    }
+
+    public function testShouldNotLeakTemplateDataBetweenConsecutiveCompiles()
+    {
+        $viewInstance = $this->getInstance();
+
+        $first = $viewInstance->compile('leak-consecutive', ['consecutiveSecret' => 'first']);
+        $this->assertStringContainsString('LEAKED:first', $first);
+
+        $second = $viewInstance->compile('leak-consecutive');
+        $this->assertStringContainsString('CLEAN', $second);
+        $this->assertStringNotContainsString('LEAKED', $second);
+        $this->assertSame([], $viewInstance->getTemplateData());
+    }
 }
