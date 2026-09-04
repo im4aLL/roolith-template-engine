@@ -84,6 +84,12 @@ class ViewTest extends TestCase
         $viewInstance->setTemplateData(['test' => 'aaa']);
 
         $this->assertEquals('aaa', $viewInstance->escape('test'));
+    }
+
+    public function testShouldThrowWhenEscapingUndefinedVariable()
+    {
+        $viewInstance = $this->getInstance();
+        $viewInstance->setTemplateData(['test' => 'aaa']);
 
         $this->expectException(\Roolith\Template\Engine\Exceptions\Exception::class);
         $viewInstance->escape('not');
@@ -169,6 +175,11 @@ class ViewTest extends TestCase
         $this->assertNotEmpty($result);
         $this->assertStringContainsString('home page', $result);
         $this->assertStringContainsString('home content', $result);
+    }
+
+    public function testShouldThrowForMissingViewFile()
+    {
+        $viewInstance = $this->getInstance();
 
         $this->expectException(\Roolith\Template\Engine\Exceptions\Exception::class);
         $viewInstance->compile('file-doesnt-exists');
