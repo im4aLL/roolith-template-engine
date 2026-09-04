@@ -1,3 +1,4 @@
+<?php /** @var \Roolith\Template\Engine\View $this */ ?>
 <!doctype html>
 <html lang="en">
 <head>

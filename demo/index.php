@@ -9,7 +9,7 @@ try {
         'title' => 'home page',
     ];
 
-    echo $view->compile('nested/template', $data);
+    echo $view->compile('home', $data);
 } catch (\Roolith\Template\Engine\Exceptions\Exception | \Roolith\Template\Engine\Exceptions\InvalidArgumentException $e) {
     echo $e->getMessage();
 }

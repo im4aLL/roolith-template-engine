@@ -1,3 +1,4 @@
+<?php /** @var \Roolith\Template\Engine\View $this */ ?>
     <p><?= $this->escape('templateVar') ?></p>
     <script src="<?= $this->url('assets/app.js') ?>"></script>
 

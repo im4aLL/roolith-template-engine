@@ -36,6 +36,7 @@ partials/footer.php
 
 Where `home.php`
 ```php
+<?php /** @var \Roolith\Template\Engine\View $this */ ?>
 <?php $this->inject('partials/header') ?>
 
     <p><?= $this->escape('content') ?></p>
@@ -45,6 +46,7 @@ Where `home.php`
 
 `header.php`
 ```php
+<?php /** @var \Roolith\Template\Engine\View $this */ ?>
 <!doctype html>
 <html lang="en">
 <head>
@@ -60,11 +62,22 @@ Where `home.php`
 
 `footer.php`
 ```php
+<?php /** @var \Roolith\Template\Engine\View $this */ ?>
     <script src="<?= $this->url('assets/app.js') ?>"></script>
 
 </body>
 </html>
 ```
+
+#### Editor support (IDE)
+Templates are included in `View` scope, so `$this` is a `View` at runtime.
+Editors analyze template files standalone and flag `$this` as invalid.
+Add this as line 1 in every template that uses `$this`:
+```php
+<?php /** @var \Roolith\Template\Engine\View $this */ ?>
+```
+It changes no runtime behavior and enables autocomplete for `inject()`, `escape()`, `e()` and `url()`.
+Use `\Roolith\Template\Engine\Interfaces\ViewInterface` in the docblock if you type against the contract.
 
 #### Escaping
 You may use `escape` method or just print variable as plain.
