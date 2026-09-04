@@ -44,6 +44,42 @@ class ViewTest extends TestCase
         $viewInstance->escape('not');
     }
 
+    public function testShouldEscapeXssPayload()
+    {
+        $viewInstance = $this->getInstance();
+        $viewInstance->setTemplateData(['test' => '<script>alert("xss")</script>']);
+
+        $expected = '&lt;script&gt;alert(&quot;xss&quot;)&lt;/script&gt;';
+
+        $this->assertEquals($expected, $viewInstance->escape('test'));
+        $this->assertEquals($expected, $viewInstance->e('<script>alert("xss")</script>'));
+        $this->assertEquals('&lt;b&gt;bold&lt;/b&gt; &amp; &#039;quotes&#039;', $viewInstance->e("<b>bold</b> & 'quotes'"));
+    }
+
+    public function testShouldRenderNullAsEmptyString()
+    {
+        $viewInstance = $this->getInstance();
+        $viewInstance->setTemplateData(['test' => null]);
+
+        $this->assertSame('', $viewInstance->escape('test'));
+        $this->assertSame('', $viewInstance->e(null));
+    }
+
+    public function testShouldHandleUtf8()
+    {
+        $viewInstance = $this->getInstance();
+
+        $valid = 'héllo 日本語';
+        $viewInstance->setTemplateData(['test' => $valid]);
+        $this->assertSame($valid, $viewInstance->escape('test'));
+        $this->assertSame($valid, $viewInstance->e($valid));
+
+        $invalid = "\xC3\x28";
+        $result = $viewInstance->e($invalid);
+        $this->assertStringContainsString("\u{FFFD}", $result);
+        $this->assertNotSame('', $result);
+    }
+
     public function testShouldAddSlashBeforeUrl()
     {
         $viewInstance = $this->getInstance();

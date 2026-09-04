@@ -219,15 +219,27 @@ class View implements ViewInterface
     /**
      * @inheritDoc
      */
+    public function e(mixed $value): string
+    {
+        if ($value === null) {
+            return '';
+        }
+
+        return htmlspecialchars((string) $value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+    }
+
+    /**
+     * @inheritDoc
+     */
     public function escape(string $var): string
     {
-        extract($this->getTemplateData(), EXTR_SKIP);
+        $data = $this->getTemplateData();
 
-        if (!isset(${$var})) {
+        if (!array_key_exists($var, $data)) {
             throw new Exception('$' .$var . ' not defined!');
         }
 
-        return htmlspecialchars((string) ${$var}, ENT_QUOTES, 'UTF-8');
+        return $this->e($data[$var]);
     }
 
     /**

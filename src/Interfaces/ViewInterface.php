@@ -34,6 +34,14 @@ interface ViewInterface
     public function url(string $urlSuffix): string;
 
     /**
+     * Escape a value for HTML output.
+     *
+     * @param mixed $value
+     * @return string
+     */
+    public function e(mixed $value): string;
+
+    /**
      * @param string $var
      * @return string
      * @throws Exception
