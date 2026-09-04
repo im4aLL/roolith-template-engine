@@ -60,7 +60,7 @@ class View implements ViewInterface
             return $output === false ? '' : $output;
         } else {
             $path = $this->getFilePathByName($filename);
-            throw new Exception("$filename not exists! [resolved: $path]");
+            throw new Exception("View [$filename] does not exist. [resolved: $path]");
         }
     }
 
@@ -134,6 +134,8 @@ class View implements ViewInterface
 
             $candidate = $this->viewFolder . '/' . $updatedFilename . '.' . $this->fileExtension;
         }
+
+        $candidate = preg_replace('#/+#', '/', $candidate);
 
         $baseReal = realpath($this->viewFolder);
 
@@ -213,7 +215,7 @@ class View implements ViewInterface
                 include($this->getFilePathByName($filename));
             } else {
                 $path = $this->getFilePathByName($filename);
-                throw new Exception("$filename not exists! [resolved: $path]");
+                throw new Exception("View [$filename] does not exist. [resolved: $path]");
             }
         } finally {
             $this->setTemplateData($savedTemplateData);
