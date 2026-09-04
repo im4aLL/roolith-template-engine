@@ -36,7 +36,7 @@ partials/footer.php
 
 Where `home.php`
 ```php
-<?php /** @var \Roolith\Template\Engine\View $this */ ?>
+<?php /** @var \Roolith\Template\Engine\Interfaces\TemplateContextInterface $this */ ?>
 <?php $this->inject('partials/header') ?>
 
     <p><?= $this->escape('content') ?></p>
@@ -46,7 +46,7 @@ Where `home.php`
 
 `header.php`
 ```php
-<?php /** @var \Roolith\Template\Engine\View $this */ ?>
+<?php /** @var \Roolith\Template\Engine\Interfaces\TemplateContextInterface $this */ ?>
 <!doctype html>
 <html lang="en">
 <head>
@@ -62,7 +62,7 @@ Where `home.php`
 
 `footer.php`
 ```php
-<?php /** @var \Roolith\Template\Engine\View $this */ ?>
+<?php /** @var \Roolith\Template\Engine\Interfaces\TemplateContextInterface $this */ ?>
     <script src="<?= $this->url('assets/app.js') ?>"></script>
 
 </body>
@@ -74,10 +74,11 @@ Templates are included in `View` scope, so `$this` is a `View` at runtime.
 Editors analyze template files standalone and flag `$this` as invalid.
 Add this as line 1 in every template that uses `$this`:
 ```php
-<?php /** @var \Roolith\Template\Engine\View $this */ ?>
+<?php /** @var \Roolith\Template\Engine\Interfaces\TemplateContextInterface $this */ ?>
 ```
-It changes no runtime behavior and enables autocomplete for `inject()`, `escape()`, `e()` and `url()`.
-Use `\Roolith\Template\Engine\Interfaces\ViewInterface` in the docblock if you type against the contract.
+It changes no runtime behavior and shows only template helpers in autocomplete: `inject()`, `escape()`, `e()` and `url()`.
+`View` implements both `ViewInterface` and `TemplateContextInterface`, so this docblock stays valid at runtime.
+Use `View` or `ViewInterface` in the docblock only if you also need app methods like `compile()`, `setViewFolder()` or `setBaseUrl()` inside a template.
 
 #### Escaping
 You may use `escape` method or just print variable as plain.
@@ -163,7 +164,8 @@ $view->resetTemplateData();
 Template variables are extracted in an isolated scope, so keys like `filename`, `data`, `level`, `output` and `path` remain readable inside templates.
 
 #### Contracts and structure
-`src/Interfaces/ViewInterface.php` is the minimal rendering contract (`setViewFolder`, `compile`, `inject`, `url`, `e`, `escape`, `setBaseUrl`, `getBaseUrl`).
+`src/Interfaces/TemplateContextInterface.php` is the narrow template scope seen as `$this` inside templates (`inject`, `url`, `e`, `escape`).
+`src/Interfaces/ViewInterface.php` extends it with app methods (`setViewFolder`, `compile`, `setBaseUrl`, `getBaseUrl`).
 The concrete `View` adds `getPathResolver`, `setPathResolver`, `getTemplateData`, `setTemplateData`, `resetTemplateData` and `addTemplateData` as composition and test seams.
 `src/Exceptions/Exception.php` signals missing templates and undefined variables.
 `src/Exceptions/InvalidArgumentException.php` signals invalid names, folders and escape values.
