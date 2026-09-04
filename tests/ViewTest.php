@@ -88,6 +88,30 @@ class ViewTest extends TestCase
         $this->assertEquals('/' . $url, $viewInstance->url($url));
     }
 
+    public function testShouldJoinBaseUrlWithoutTrailingSlash()
+    {
+        $viewInstance = $this->getInstance();
+        $viewInstance->setBaseUrl('http://example.com');
+
+        $this->assertEquals('http://example.com/assets/something.txt', $viewInstance->url('assets/something.txt'));
+    }
+
+    public function testShouldJoinBaseUrlWithTrailingSlash()
+    {
+        $viewInstance = $this->getInstance();
+        $viewInstance->setBaseUrl('http://example.com/');
+
+        $this->assertEquals('http://example.com/assets/something.txt', $viewInstance->url('assets/something.txt'));
+    }
+
+    public function testShouldTrimLeadingSlashFromSuffix()
+    {
+        $viewInstance = $this->getInstance();
+        $viewInstance->setBaseUrl('http://example.com/');
+
+        $this->assertEquals('http://example.com/assets/something.txt', $viewInstance->url('/assets/something.txt'));
+    }
+
     public function testShouldCompileViewFile()
     {
         $viewInstance = $this->getInstance();

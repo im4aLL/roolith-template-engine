@@ -224,9 +224,12 @@ class View implements ViewInterface
     public function url(string $urlSuffix): string
     {
         $baseUrl = $this->getBaseUrl();
-        $urlPrefix = $baseUrl ? $baseUrl : '/';
 
-        return $urlPrefix . ltrim($urlSuffix, '/');
+        if (!$baseUrl) {
+            return '/' . ltrim($urlSuffix, '/');
+        }
+
+        return rtrim($baseUrl, '/') . '/' . ltrim($urlSuffix, '/');
     }
 
     /**
